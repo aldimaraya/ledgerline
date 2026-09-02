@@ -17,3 +17,9 @@ web/dist/
 
 # Exported balance history from a previous provider — real balances, never commit
 docs/*historic*.json
+
+# import mapping — names real accounts
+docs/import-map.local.json
+
+# local backups of the live database
+server/backups/
