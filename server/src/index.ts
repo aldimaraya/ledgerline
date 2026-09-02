@@ -32,6 +32,20 @@ const app = Fastify({
 
 const db = getDb();
 
+/**
+ * Discard request bodies on anything that is not JSON.
+ *
+ * No endpoint in this API reads a body — POST /api/sync is a verb, not a payload. By
+ * default Fastify answers 415 for any content type it has no parser for, so a bodyless
+ * POST from a client that still sets a Content-Type (PowerShell does, and so do several
+ * HTTP clients) fails before the route runs. Fastify's built-in JSON parser still takes
+ * precedence for application/json, so Phase 4's onboarding POSTs are unaffected.
+ */
+app.addContentTypeParser('*', (_req, payload, done) => {
+  payload.resume(); // drain it, otherwise the socket stays open waiting to be read
+  done(null, undefined);
+});
+
 registerApi(app, db);
 
 // The PWA is served by this same process — one container, one origin, no CORS.
