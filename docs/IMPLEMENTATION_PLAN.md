@@ -249,6 +249,6 @@ after the company with no plan-type word at all. Both fell through to `liquid`.
 
 Two consequences worth carrying into Phase 3 and 4:
 
-- Widen the pattern (`health savings`, `savings plan`, `retirement`).
+- Widen the pattern (`health savings`, `savings plan`, `retirement`, `thrift`).
 - A wrong bucket doesn't change the total, so no test on net worth will catch it. Assert on
   the *split*, not just the sum.
