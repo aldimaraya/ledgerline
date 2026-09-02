@@ -116,9 +116,24 @@ Pick from these only once you've used the thing for a few weeks and know what yo
 - [ ] Asset allocation view from the `holdings` data
 - [ ] Milestone alerts via ntfy or Pushover
 - [ ] CSV export
-- [ ] **CSV history import** — backfill `snapshots` from an Empower export, or any
-      `date,account,balance` file. A ~40-line script, not a UI. Do it before you cancel
-      Empower; after that the data is gone.
+- [ ] **History import** — backfill `snapshots` from an old provider's export, or any
+      `date,account,balance` file. A script, not a UI. Do it before you cancel the old
+      service; after that the data is gone.
+
+      An export has been captured and assessed. **Findings and the decisions already
+      taken are in `docs/BASELINE.local.md`**, which is gitignored because it is real
+      balance history. Three things learned from reading it that generalise to any
+      import of this kind, and are why this is more than a trivial script:
+
+      - **Leading zeros are not data.** Exports pad backwards with `0` balances for days
+        before the accounts were linked. Imported literally, the chart opens with a
+        cliff from nothing.
+      - **Transfers double count for a day.** Money leaving one institution and arriving
+        at another shows up in both for one snapshot, producing a spike that never
+        happened. The import needs a reconciliation pass.
+      - **An account the old service never tracked leaves a hole.** Filling it needs a
+        value with bounded error — two known endpoints and a straight line between them
+        — not a number picked because it looks plausible.
 - [ ] **Manual accounts** — only if you find something worth tracking by hand. See below.
 - [ ] Face ID unlock via WebAuthn
 
@@ -205,13 +220,13 @@ it doesn't do — which is a far better spec than anything you'd write today.
 | Store transactions? | Not initially | Net worth needs balances. Transactions are a whole other product — see below. |
 | Split retirement vs liquid? | Yes, in v1 | Two-axis tagging; cheap now, awkward to retrofit into snapshot history later |
 | Track the car / illiquid assets? | No | No free real-time valuation API exists. Schema keeps the bucket; the UI doesn't. |
-| Backfill Empower history? | Optional, Phase 6 | Nice to have. Export before cancelling — it's unrecoverable after. |
+| Backfill history from the old tracker? | Optional, Phase 6 | Nice to have. Export before cancelling — it's unrecoverable after. |
 | Store holdings? | Yes, from day one | Free to capture, expensive to backfill |
 | Display cents? | No — whole dollars in the UI | Noise at this scale; cents stay in the DB as integers |
 
 ## Open questions for you
 
-1. Before cancelling Empower, check what its export actually contains — if there's a
+1. Before cancelling the old tracker, check what its export actually contains — if there's a
    net worth or balance history in there, keep the file. The importer is trivial to write
    later; regenerating the data is impossible.
 2. Any accounts SimpleFIN can't reach at all? Phase 0 will tell you. If the answer is

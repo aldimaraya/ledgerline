@@ -14,3 +14,6 @@ docs/BASELINE.local.md
 
 # built PWA, produced by `npm run build` in web/
 web/dist/
+
+# Exported balance history from a previous provider — real balances, never commit
+docs/*historic*.json

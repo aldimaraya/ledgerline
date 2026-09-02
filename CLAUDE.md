@@ -1,6 +1,6 @@
 # Ledgerline
 
-Self-hosted personal net worth tracker. Single user. Replaces Empower.
+Self-hosted personal net worth tracker. Single user. Replaces a commercial tracker.
 
 Read `docs/IMPLEMENTATION_PLAN.md` before starting work — it has the phase breakdown,
 every decision already made and why, and the Phase 0 findings from real data.
