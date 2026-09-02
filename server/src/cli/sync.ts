@@ -171,9 +171,14 @@ async function main(): Promise<number> {
   return 0;
 }
 
+// Set exitCode rather than calling process.exit(): exit() tears the process down while
+// stdout still has buffered writes, which on Windows trips a libuv assertion and can
+// truncate the output. Letting the event loop drain exits with the same code, cleanly.
 main()
-  .then((code) => process.exit(code))
+  .then((code) => {
+    process.exitCode = code;
+  })
   .catch((err: unknown) => {
     console.error(`\nSync failed: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
+    process.exitCode = 1;
   });

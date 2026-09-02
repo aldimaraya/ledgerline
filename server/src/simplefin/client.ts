@@ -79,11 +79,37 @@ export interface FetchOptions {
   includeHoldings?: boolean;
 }
 
+/**
+ * Split an access URL into a credential-free URL and a Basic auth header.
+ *
+ * SimpleFIN issues the access URL with its credentials inline, as
+ * `https://user:pass@host/path`. `fetch` refuses to construct a Request from a URL
+ * containing userinfo — it throws "Request cannot be constructed from a URL that
+ * includes credentials" — so the credentials have to move into a header. curl does this
+ * conversion silently, which is why the URL works there and not here.
+ */
+export function splitCredentials(accessUrl: string): { url: string; authorization: string | null } {
+  const u = new URL(accessUrl);
+  if (!u.username && !u.password) return { url: u.toString(), authorization: null };
+
+  // The URL form percent-encodes these; the header wants the raw bytes.
+  const user = decodeURIComponent(u.username);
+  const pass = decodeURIComponent(u.password);
+  u.username = '';
+  u.password = '';
+
+  return {
+    url: u.toString(),
+    authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`,
+  };
+}
+
 export async function fetchAccounts(
   accessUrl: string,
   opts: FetchOptions = {}
 ): Promise<SimpleFinAccountSet> {
-  const url = new URL(`${accessUrl.replace(/\/$/, '')}/accounts`);
+  const { url: base, authorization } = splitCredentials(accessUrl.replace(/\/$/, ''));
+  const url = new URL(`${base.replace(/\/$/, '')}/accounts`);
 
   if (opts.startDate) {
     url.searchParams.set('start-date', String(Math.floor(opts.startDate.getTime() / 1000)));
@@ -91,12 +117,17 @@ export async function fetchAccounts(
   if (opts.endDate) {
     url.searchParams.set('end-date', String(Math.floor(opts.endDate.getTime() / 1000)));
   }
-  // Balances-only keeps responses small. We never need transactions.
-  if (!opts.startDate && !opts.endDate) {
+  // Balances-only keeps responses small, but it also suppresses `holdings` — so it is
+  // only safe when the caller has not asked for them. Holdings cannot be backfilled
+  // later, which is why they are captured from day one even though v1 does not show them.
+  if (!opts.startDate && !opts.endDate && !opts.includeHoldings) {
     url.searchParams.set('balances-only', '1');
   }
 
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (authorization) headers.Authorization = authorization;
+
+  const res = await fetch(url, { headers });
 
   if (res.status === 403) {
     throw new Error('SimpleFIN rejected the access URL. The connection may have been revoked.');
