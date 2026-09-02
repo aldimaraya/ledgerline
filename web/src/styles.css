@@ -1,0 +1,203 @@
+/*
+ * Design tokens, lifted from design/mockups.html.
+ *
+ * Brass and sage are the only two chromatic values in the interface and they map to the
+ * two buckets — the palette is the information architecture. No colour here is
+ * decorative, so adding one means adding a meaning.
+ */
+:root {
+  --ink: #14100d;
+  --ink-raised: #1e1b17;
+  --rule: #332e28;
+  --bone: #ede6da;
+  --dust: #8c8378;
+  --brass: #d4a24c;
+  --sage: #7c9a83;
+  --rust: #b4553f;
+  --mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --sans: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--ink);
+  font-family: var(--sans);
+  color: var(--bone);
+  -webkit-font-smoothing: antialiased;
+  /* Standalone PWA: keep content clear of the notch and home indicator. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  overscroll-behavior-y: contain;
+}
+
+.app { height: 100%; display: flex; flex-direction: column; max-width: 520px; margin: 0 auto; }
+
+/* ---------- app bar ---------- */
+.bar {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 16px;
+}
+.wordmark {
+  font-family: var(--mono); font-size: 12px; letter-spacing: -0.02em; color: var(--dust);
+  background: none; border: none; cursor: pointer; padding: 6px 0; min-height: 44px;
+  display: flex; align-items: center;
+}
+.sync {
+  font-family: var(--mono); font-size: 10px; color: var(--dust);
+  display: flex; align-items: center; gap: 6px; background: none; border: none;
+  min-height: 44px; cursor: pointer;
+}
+.sync::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--sage); }
+.sync.is-stale { color: var(--rust); }
+.sync.is-stale::before { background: var(--rust); }
+.sync.is-syncing::before { animation: pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+
+/* ---------- hero ---------- */
+.hero { padding: 14px 20px 0; }
+.eyebrow {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--dust);
+}
+.total {
+  font-family: var(--mono); font-weight: 400; font-size: 50px; letter-spacing: -0.045em;
+  line-height: 1.04; margin-top: 10px; font-feature-settings: 'tnum';
+}
+/* An incomplete total is greyed rather than hidden: you still get a number, but it
+   stops reading as authoritative. */
+.total.is-uncertain { color: var(--dust); }
+.delta {
+  font-family: var(--mono); font-size: 12px; color: var(--sage); margin-top: 9px;
+  display: flex; gap: 7px; align-items: baseline;
+}
+.delta.is-down { color: var(--rust); }
+.delta em { color: var(--dust); font-style: normal; }
+
+.staff-rule { height: 1px; background: var(--rule); margin: 20px 20px 0; }
+
+/* ---------- buckets ---------- */
+.buckets { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rule); }
+.bucket { background: var(--ink); padding: 16px 20px 18px; }
+.bucket-name {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 7px;
+}
+.bucket-name::before { content: ''; width: 12px; height: 2px; border-radius: 1px; }
+.bucket.liquid .bucket-name { color: var(--brass); }
+.bucket.liquid .bucket-name::before { background: var(--brass); }
+.bucket.retire .bucket-name { color: var(--sage); }
+.bucket.retire .bucket-name::before { background: var(--sage); }
+.bucket-figure {
+  font-family: var(--mono); font-size: 21px; letter-spacing: -0.03em; margin-top: 11px;
+  font-feature-settings: 'tnum';
+}
+.bucket-sub { font-family: var(--mono); font-size: 10px; color: var(--dust); margin-top: 6px; }
+
+/* ---------- chart: the staff ---------- */
+.plot { padding: 26px 20px 0; position: relative; }
+.plot svg { width: 100%; display: block; overflow: visible; }
+.staffline { stroke: var(--rule); stroke-width: 1; }
+.trace {
+  fill: none; stroke: var(--brass); stroke-width: 1.75;
+  stroke-linejoin: round; stroke-linecap: round;
+}
+.trace.is-retire { stroke: var(--sage); }
+.trace.draw { stroke-dasharray: 640; stroke-dashoffset: 640; animation: draw 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .trace.draw { animation: none; stroke-dashoffset: 0; }
+  .sync.is-syncing::before { animation: none; }
+}
+/* The signature: a ledger line carrying the current value past the staff. */
+.ledger { stroke: var(--brass); stroke-width: 1.75; }
+.ledger-dot { fill: var(--brass); }
+.ledger-value { font-family: var(--mono); font-size: 9.5px; fill: var(--brass); letter-spacing: -0.02em; }
+.plot-empty {
+  font-family: var(--mono); font-size: 10.5px; color: var(--dust); text-align: center;
+  padding: 34px 0; line-height: 1.6;
+}
+
+.ranges { display: flex; gap: 4px; padding: 20px 20px 0; }
+/* Second row: the series toggles. Tighter above, so the two rows read as one control. */
+.ranges.is-series { padding-top: 6px; }
+.range {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--dust);
+  padding: 7px 11px; border-radius: 5px; border: 1px solid transparent; background: none;
+  cursor: pointer; min-height: 44px;
+}
+.range.is-on { color: var(--bone); border-color: var(--rule); background: var(--ink-raised); }
+
+/* ---------- footer link ---------- */
+.spacer { flex: 1; }
+.jump {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 17px 20px; border-top: 1px solid var(--rule); background: none;
+  color: var(--bone); cursor: pointer; width: 100%; min-height: 56px; text-align: left;
+}
+.jump-title { font-size: 13px; font-weight: 500; letter-spacing: -0.01em; }
+.jump-meta { font-family: var(--mono); font-size: 10.5px; color: var(--dust); }
+
+/* ---------- accounts ---------- */
+.scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  /* Column layout so .spacer can push the footer link down to the bottom edge on a
+     short page, while still scrolling normally once the content outgrows the screen. */
+  display: flex; flex-direction: column; min-height: 0;
+}
+/* Children keep their natural height rather than being stretched to share the box... */
+.scroll > * { flex: none; }
+/* ...except the spacer, whose whole job is to absorb what is left so the footer link
+   lands on the bottom edge. This rule must follow the one above: same specificity. */
+.scroll > .spacer { flex: 1 0 auto; }
+.group { padding: 22px 20px 4px; display: flex; align-items: baseline; justify-content: space-between; }
+.group-name { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; }
+.group.liquid .group-name { color: var(--brass); }
+.group.retire .group-name { color: var(--sage); }
+.group.owed .group-name { color: var(--rust); }
+.group-sum { font-family: var(--mono); font-size: 12px; color: var(--dust); font-feature-settings: 'tnum'; }
+
+.row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 13px 20px; border-bottom: 1px solid rgba(51, 46, 40, 0.55); min-height: 56px;
+}
+.row-id { min-width: 0; }
+.row-name { font-size: 13.5px; font-weight: 500; letter-spacing: -0.01em; }
+.row-org { font-family: var(--mono); font-size: 10px; color: var(--dust); margin-top: 4px; }
+.row-amt {
+  font-family: var(--mono); font-size: 14px; letter-spacing: -0.02em; text-align: right;
+  flex: none; font-feature-settings: 'tnum';
+}
+.row-amt.owed { color: var(--rust); }
+.row-age { font-family: var(--mono); font-size: 9.5px; color: var(--dust); margin-top: 4px; text-align: right; }
+.row-age.is-stale { color: var(--rust); }
+
+/* ---------- stale / error ---------- */
+.alarm {
+  margin: 16px 20px 0; border: 1px solid rgba(180, 85, 63, 0.42); border-radius: 10px;
+  background: rgba(180, 85, 63, 0.09); padding: 15px 16px;
+}
+.alarm-head {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--rust);
+}
+.alarm-body { font-size: 12.5px; line-height: 1.6; margin-top: 9px; color: var(--bone); }
+.alarm-act {
+  margin-top: 13px; padding: 10px 14px; border-radius: 7px; border: 1px solid var(--rust);
+  background: none; color: var(--rust); font-family: var(--sans); font-size: 12.5px;
+  font-weight: 500; cursor: pointer; min-height: 44px;
+}
+
+/* ---------- pull to refresh ---------- */
+.pull {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center;
+  justify-content: center; font-family: var(--mono); font-size: 10px; color: var(--dust);
+  letter-spacing: 0.12em; text-transform: uppercase; pointer-events: none;
+}
+.shell { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.skeleton { color: var(--dust); font-family: var(--mono); font-size: 12px; padding: 40px 20px; }
+
+*:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }

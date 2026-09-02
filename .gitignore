@@ -11,3 +11,6 @@ docs/sample-response.json
 # local, unshared baseline figures
 docs/BASELINE.local.md
 *.local.md
+
+# built PWA, produced by `npm run build` in web/
+web/dist/
