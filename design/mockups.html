@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledgerline — screen designs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14100D;
+  --ink-raised:#1E1B17;
+  --rule:#332E28;
+  --bone:#EDE6DA;
+  --dust:#8C8378;
+  --brass:#D4A24C;
+  --sage:#7C9A83;
+  --rust:#B4553F;
+  --mono:"DM Mono",ui-monospace,monospace;
+  --sans:"Instrument Sans",system-ui,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  background:#0B0908;
+  font-family:var(--sans);
+  color:var(--bone);
+  padding:56px 24px 88px;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- gallery chrome (not part of the app) ---------- */
+.gallery-head{max-width:1180px;margin:0 auto 52px}
+.gallery-head h1{
+  font-family:var(--mono);font-weight:400;font-size:30px;letter-spacing:-.03em;
+}
+.gallery-head p{
+  color:var(--dust);font-size:14px;margin-top:10px;max-width:56ch;line-height:1.6;
+}
+.rack{
+  display:flex;flex-wrap:wrap;gap:52px;justify-content:center;
+  max-width:1180px;margin:0 auto;align-items:flex-start;
+}
+.slot{width:322px}
+.slot-label{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dust);margin-bottom:14px;display:flex;gap:10px;align-items:baseline;
+}
+.slot-label b{color:var(--brass);font-weight:400}
+.slot-note{
+  font-size:12px;color:var(--dust);line-height:1.55;margin-top:14px;
+}
+
+/* ---------- phone ---------- */
+.phone{
+  width:322px;height:668px;background:var(--ink);
+  border:1px solid var(--rule);border-radius:34px;
+  overflow:hidden;position:relative;
+  display:flex;flex-direction:column;
+  box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+.status{
+  height:34px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;font-family:var(--mono);font-size:10px;color:var(--dust);
+}
+.screen{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* ---------- app bar ---------- */
+.bar{
+  flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:6px 20px 16px;
+}
+.wordmark{
+  font-family:var(--mono);font-size:12px;letter-spacing:-.02em;color:var(--dust);
+}
+.sync{
+  font-family:var(--mono);font-size:10px;color:var(--dust);
+  display:flex;align-items:center;gap:6px;
+}
+.sync::before{
+  content:"";width:5px;height:5px;border-radius:50%;background:var(--sage);
+}
+.sync.is-stale{color:var(--rust)}
+.sync.is-stale::before{background:var(--rust)}
+
+/* ---------- hero ---------- */
+.hero{padding:14px 20px 0}
+.eyebrow{
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--dust);
+}
+.total{
+  font-family:var(--mono);font-weight:400;font-size:50px;letter-spacing:-.045em;
+  line-height:1.04;margin-top:10px;font-feature-settings:"tnum";
+}
+.delta{
+  font-family:var(--mono);font-size:12px;color:var(--sage);margin-top:9px;
+  display:flex;gap:7px;align-items:baseline;
+}
+.delta em{color:var(--dust);font-style:normal}
+
+.staff-rule{height:1px;background:var(--rule);margin:20px 20px 0}
+
+/* ---------- buckets ---------- */
+.buckets{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)}
+.bucket{background:var(--ink);padding:16px 20px 18px}
+.bucket-name{
+  font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  display:flex;align-items:center;gap:7px;
+}
+.bucket-name::before{content:"";width:12px;height:2px;border-radius:1px}
+.bucket.liquid .bucket-name{color:var(--brass)}
+.bucket.liquid .bucket-name::before{background:var(--brass)}
+.bucket.retire .bucket-name{color:var(--sage)}
+.bucket.retire .bucket-name::before{background:var(--sage)}
+.bucket-figure{
+  font-family:var(--mono);font-size:21px;letter-spacing:-.03em;margin-top:11px;
+  font-feature-settings:"tnum";
+}
+.bucket-sub{font-family:var(--mono);font-size:10px;color:var(--dust);margin-top:6px}
+
+/* ---------- chart / the staff ---------- */
+.plot{padding:26px 20px 0;position:relative}
+.plot svg{width:100%;display:block;overflow:visible}
+.staffline{stroke:var(--rule);stroke-width:1}
+.trace{
+  fill:none;stroke:var(--brass);stroke-width:1.75;
+  stroke-linejoin:round;stroke-linecap:round;
+  stroke-dasharray:640;stroke-dashoffset:640;
+  animation:draw .5s cubic-bezier(.22,1,.36,1) .12s forwards;
+}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){
+  .trace{animation:none;stroke-dashoffset:0}
+}
+/* the signature: a ledger line carrying the current value past the staff */
+.ledger{stroke:var(--brass);stroke-width:1.75}
+.ledger-dot{fill:var(--brass)}
+.ledger-value{
+  font-family:var(--mono);font-size:9.5px;fill:var(--brass);letter-spacing:-.02em;
+}
+
+.ranges{
+  display:flex;gap:4px;padding:20px 20px 0;
+}
+.range{
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dust);
+  padding:7px 11px;border-radius:5px;border:1px solid transparent;background:none;
+  cursor:pointer;
+}
+.range.is-on{color:var(--bone);border-color:var(--rule);background:var(--ink-raised)}
+
+/* ---------- footer link ---------- */
+.spacer{flex:1}
+.jump{
+  flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:17px 20px;border-top:1px solid var(--rule);
+}
+.jump-title{font-size:13px;font-weight:500;letter-spacing:-.01em}
+.jump-meta{font-family:var(--mono);font-size:10.5px;color:var(--dust)}
+
+/* ---------- accounts ---------- */
+.scroll{flex:1;overflow-y:auto;padding-bottom:20px}
+.group{padding:22px 20px 4px;display:flex;align-items:baseline;justify-content:space-between}
+.group-name{
+  font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+}
+.group.liquid .group-name{color:var(--brass)}
+.group.retire .group-name{color:var(--sage)}
+.group.owed .group-name{color:var(--rust)}
+.group-sum{font-family:var(--mono);font-size:12px;color:var(--dust);font-feature-settings:"tnum"}
+
+.row{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:13px 20px;border-bottom:1px solid rgba(51,46,40,.55);min-height:56px;
+}
+.row-id{min-width:0}
+.row-name{font-size:13.5px;font-weight:500;letter-spacing:-.01em}
+.row-org{font-family:var(--mono);font-size:10px;color:var(--dust);margin-top:4px}
+.row-amt{
+  font-family:var(--mono);font-size:14px;letter-spacing:-.02em;text-align:right;
+  flex:none;font-feature-settings:"tnum";
+}
+.row-amt.owed{color:var(--rust)}
+.row-age{font-family:var(--mono);font-size:9.5px;color:var(--dust);margin-top:4px;text-align:right}
+.row-age.is-stale{color:var(--rust)}
+
+/* ---------- setup ---------- */
+.setup{padding:22px 20px;overflow-y:auto;flex:1}
+.setup h2{
+  font-family:var(--mono);font-weight:400;font-size:20px;letter-spacing:-.03em;
+}
+.setup .lede{font-size:12.5px;color:var(--dust);line-height:1.6;margin-top:9px}
+.step{
+  font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--brass);
+  text-transform:uppercase;
+}
+.found{
+  font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--dust);margin:24px 0 10px;
+}
+.pick{
+  border:1px solid var(--rule);border-radius:9px;padding:13px 14px;margin-bottom:9px;
+  background:var(--ink-raised);
+}
+.pick-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.pick-name{font-size:13px;font-weight:500;letter-spacing:-.01em}
+.pick-org{font-family:var(--mono);font-size:9.5px;color:var(--dust);margin-top:3px}
+.pick-amt{font-family:var(--mono);font-size:13px;flex:none;font-feature-settings:"tnum"}
+.pick-amt.owed{color:var(--rust)}
+.segs{display:flex;gap:5px;margin-top:12px}
+.seg{
+  flex:1;font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;
+  padding:7px 0;text-align:center;border-radius:5px;
+  border:1px solid var(--rule);color:var(--dust);background:none;cursor:pointer;
+}
+.seg.on-liquid{border-color:var(--brass);color:var(--brass);background:rgba(212,162,76,.09)}
+.seg.on-retire{border-color:var(--sage);color:var(--sage);background:rgba(124,154,131,.1)}
+.guessed{
+  font-family:var(--mono);font-size:9.5px;color:var(--dust);margin-top:10px;
+}
+.cta{
+  width:100%;padding:15px;border-radius:9px;border:none;background:var(--brass);
+  color:var(--ink);font-family:var(--sans);font-size:14px;font-weight:600;
+  letter-spacing:-.01em;margin-top:20px;cursor:pointer;
+}
+
+/* ---------- stale / error ---------- */
+.alarm{
+  margin:0 20px;border:1px solid rgba(180,85,63,.42);border-radius:10px;
+  background:rgba(180,85,63,.09);padding:15px 16px;
+}
+.alarm-head{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--rust);
+}
+.alarm-body{font-size:12.5px;line-height:1.6;margin-top:9px;color:var(--bone)}
+.alarm-act{
+  margin-top:13px;padding:10px 14px;border-radius:7px;border:1px solid var(--rust);
+  background:none;color:var(--rust);font-family:var(--sans);font-size:12.5px;
+  font-weight:500;cursor:pointer;
+}
+.total.is-uncertain{color:var(--dust)}
+.dimmed{color:var(--dust)}
+
+*:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<div class="gallery-head">
+  <h1>Ledgerline</h1>
+  <p>Four screens. Dark ink ground, brass for liquid, sage for retirement — the palette is
+     the information architecture. Every figure is DM Mono with tabular numerals so digits
+     don't shift as balances update. The chart is drawn as a musical staff; the current
+     value sits on a ledger line extending past it.</p>
+</div>
+
+<div class="rack">
+
+  <!-- ============ 1. HOME ============ -->
+  <div class="slot">
+    <div class="slot-label"><b>01</b> Net worth</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>􀙇 􀛨</span></div>
+      <div class="screen">
+        <div class="bar">
+          <div class="wordmark">ledgerline</div>
+          <div class="sync">synced 2h ago</div>
+        </div>
+
+        <div class="hero">
+          <div class="eyebrow">Net worth</div>
+          <div class="total">$425,663</div>
+          <div class="delta">▲ $1,240 <em>today</em></div>
+        </div>
+
+        <div class="staff-rule"></div>
+
+        <div class="buckets">
+          <div class="bucket liquid">
+            <div class="bucket-name">Liquid</div>
+            <div class="bucket-figure">$97,140</div>
+            <div class="bucket-sub">4 accounts</div>
+          </div>
+          <div class="bucket retire">
+            <div class="bucket-name">Retirement</div>
+            <div class="bucket-figure">$328,523</div>
+            <div class="bucket-sub">3 accounts</div>
+          </div>
+        </div>
+
+        <div class="plot">
+          <svg viewBox="0 0 300 118" preserveAspectRatio="none" aria-label="Net worth over one year">
+            <g class="staffline">
+              <line x1="0" y1="4"   x2="258" y2="4"/>
+              <line x1="0" y1="32"  x2="258" y2="32"/>
+              <line x1="0" y1="60"  x2="258" y2="60"/>
+              <line x1="0" y1="88"  x2="258" y2="88"/>
+              <line x1="0" y1="116" x2="258" y2="116"/>
+            </g>
+            <path class="trace" transform="scale(0.86,1)" d="M 0.0,95.4 L 4.8,93.6 L 9.5,90.1 L 14.3,90.7 L 19.0,93.7 L 23.8,93.1 L 28.6,91.0 L 33.3,87.1 L 38.1,89.7 L 42.9,92.6 L 47.6,89.8 L 52.4,87.7 L 57.1,82.6 L 61.9,79.0 L 66.7,78.4 L 71.4,78.4 L 76.2,70.2 L 81.0,70.2 L 85.7,71.7 L 90.5,74.2 L 95.2,73.1 L 100.0,71.9 L 104.8,72.1 L 109.5,71.4 L 114.3,69.8 L 119.0,66.9 L 123.8,62.8 L 128.6,61.3 L 133.3,65.9 L 138.1,62.9 L 142.9,66.4 L 147.6,66.0 L 152.4,69.6 L 157.1,68.8 L 161.9,70.3 L 166.7,68.8 L 171.4,58.2 L 176.2,57.5 L 181.0,54.0 L 185.7,57.2 L 190.5,57.3 L 195.2,54.4 L 200.0,53.8 L 204.8,51.8 L 209.5,50.6 L 214.3,52.9 L 219.0,50.3 L 223.8,51.9 L 228.6,45.2 L 233.3,46.0 L 238.1,42.9 L 242.9,42.0 L 247.6,38.1 L 252.4,39.1 L 257.1,35.1 L 261.9,34.6 L 266.7,29.6 L 271.4,26.6 L 276.2,25.2 L 281.0,26.9 L 285.7,23.4 L 290.5,21.0 L 295.2,14.6 L 300.0,14.9"/>
+            <!-- signature: the ledger line -->
+            <line class="ledger" x1="250" y1="14.9" x2="272" y2="14.9"/>
+            <circle class="ledger-dot" cx="258" cy="14.9" r="2.6"/>
+            <text class="ledger-value" x="276" y="18.2">425.6k</text>
+          </svg>
+        </div>
+
+        <div class="ranges">
+          <button class="range">1M</button>
+          <button class="range">6M</button>
+          <button class="range is-on">1Y</button>
+          <button class="range">ALL</button>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="jump">
+          <div class="jump-title">Accounts</div>
+          <div class="jump-meta">8 across 4 institutions ›</div>
+        </div>
+      </div>
+    </div>
+    <p class="slot-note">The whole answer above the fold. Total, its two components, the
+      shape of the year. One tap to detail, nothing to dismiss.</p>
+  </div>
+
+  <!-- ============ 2. ACCOUNTS ============ -->
+  <div class="slot">
+    <div class="slot-label"><b>02</b> Accounts</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>􀙇 􀛨</span></div>
+      <div class="screen">
+        <div class="bar">
+          <div class="wordmark">‹ ledgerline</div>
+          <div class="sync">synced 2h ago</div>
+        </div>
+
+        <div class="scroll">
+          <div class="group liquid">
+            <div class="group-name">Liquid</div>
+            <div class="group-sum">$97,140</div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">Brokerage</div>
+              <div class="row-org">Northwind Securities</div>
+            </div>
+            <div>
+              <div class="row-amt">$61,208.14</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">Checking</div>
+              <div class="row-org">Northwind Securities</div>
+            </div>
+            <div>
+              <div class="row-amt">$8,431.90</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">High-Yield Savings</div>
+              <div class="row-org">Contoso Bank</div>
+            </div>
+            <div>
+              <div class="row-amt">$22,500.00</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">Brokerage</div>
+              <div class="row-org">Adventure Works</div>
+            </div>
+            <div>
+              <div class="row-amt">$8,842.61</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+
+          <div class="group retire">
+            <div class="group-name">Retirement</div>
+            <div class="group-sum">$328,523</div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">401(k)</div>
+              <div class="row-org">Fabrikam Investments</div>
+            </div>
+            <div>
+              <div class="row-amt">$214,096.02</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">Roth IRA</div>
+              <div class="row-org">Fabrikam Investments</div>
+            </div>
+            <div>
+              <div class="row-amt">$82,110.75</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">Rollover IRA</div>
+              <div class="row-org">Northwind Securities</div>
+            </div>
+            <div>
+              <div class="row-amt">$32,316.44</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+
+          <div class="group owed">
+            <div class="group-name">Owed</div>
+            <div class="group-sum">−$1,842</div>
+          </div>
+          <div class="row">
+            <div class="row-id">
+              <div class="row-name">Rewards Card</div>
+              <div class="row-org">Contoso Bank</div>
+            </div>
+            <div>
+              <div class="row-amt owed">−$1,842.31</div>
+              <div class="row-age">2h ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="slot-note">Grouped by bucket, not institution — the grouping you actually
+      think in. Every row carries its own age.</p>
+  </div>
+
+  <!-- ============ 3. SETUP ============ -->
+  <div class="slot">
+    <div class="slot-label"><b>03</b> First run</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>􀙇 􀛨</span></div>
+      <div class="screen">
+        <div class="bar">
+          <div class="wordmark">ledgerline</div>
+          <div class="sync" style="color:var(--dust)">setup</div>
+        </div>
+
+        <div class="setup">
+          <div class="step">Step 2 of 2</div>
+          <h2 style="margin-top:10px">Sort your accounts</h2>
+          <p class="lede">Eight accounts came back from SimpleFIN. We've guessed each one
+            from its name — correct anything that's wrong.</p>
+
+          <div class="found">Fabrikam Investments</div>
+
+          <div class="pick">
+            <div class="pick-top">
+              <div>
+                <div class="pick-name">401(k)</div>
+                <div class="pick-org">····6642</div>
+              </div>
+              <div class="pick-amt">$214,096</div>
+            </div>
+            <div class="segs">
+              <button class="seg">Liquid</button>
+              <button class="seg on-retire">Retirement</button>
+              <button class="seg">Skip</button>
+            </div>
+          </div>
+
+          <div class="pick">
+            <div class="pick-top">
+              <div>
+                <div class="pick-name">Roth IRA</div>
+                <div class="pick-org">····1180</div>
+              </div>
+              <div class="pick-amt">$82,110</div>
+            </div>
+            <div class="segs">
+              <button class="seg">Liquid</button>
+              <button class="seg on-retire">Retirement</button>
+              <button class="seg">Skip</button>
+            </div>
+          </div>
+
+          <div class="found">Contoso Bank</div>
+
+          <div class="pick">
+            <div class="pick-top">
+              <div>
+                <div class="pick-name">Rewards Card</div>
+                <div class="pick-org">····9037 · credit card</div>
+              </div>
+              <div class="pick-amt owed">−$1,842</div>
+            </div>
+            <div class="segs">
+              <button class="seg on-liquid">Liquid</button>
+              <button class="seg">Retirement</button>
+              <button class="seg">Skip</button>
+            </div>
+            <div class="guessed">Counted as money owed.</div>
+          </div>
+
+          <button class="cta">Start tracking</button>
+        </div>
+      </div>
+    </div>
+    <p class="slot-note">Confirming, not configuring — <code>guessBucket()</code> pre-fills
+      from the account name so most people tap straight through.</p>
+  </div>
+
+  <!-- ============ 4. STALE ============ -->
+  <div class="slot">
+    <div class="slot-label"><b>04</b> Connection expired</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>􀙇 􀛨</span></div>
+      <div class="screen">
+        <div class="bar">
+          <div class="wordmark">ledgerline</div>
+          <div class="sync is-stale">1 of 4 stale</div>
+        </div>
+
+        <div class="hero">
+          <div class="eyebrow">Net worth · incomplete</div>
+          <div class="total is-uncertain">$402,321</div>
+          <div class="delta"><em>Contoso Bank last updated 6 days ago</em></div>
+        </div>
+
+        <div class="staff-rule"></div>
+
+        <div style="padding:20px 0 4px">
+          <div class="alarm">
+            <div class="alarm-head">Contoso Bank needs reauthorizing</div>
+            <div class="alarm-body">Contoso Bank's consent expires periodically. Two accounts
+              have shown the same balance since Aug&nbsp;20 and are excluded from the total
+              above.</div>
+            <button class="alarm-act">Reconnect Contoso Bank</button>
+          </div>
+        </div>
+
+        <div class="buckets" style="margin-top:20px">
+          <div class="bucket liquid">
+            <div class="bucket-name">Liquid</div>
+            <div class="bucket-figure dimmed">$73,798</div>
+            <div class="bucket-sub" style="color:var(--rust)">2 accounts missing</div>
+          </div>
+          <div class="bucket retire">
+            <div class="bucket-name">Retirement</div>
+            <div class="bucket-figure">$328,523</div>
+            <div class="bucket-sub">3 accounts</div>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="jump">
+          <div class="jump-title">Accounts</div>
+          <div class="jump-meta">8 across 4 institutions ›</div>
+        </div>
+      </div>
+    </div>
+    <p class="slot-note">The failure case is the one that matters. The total goes grey and
+      says <em>incomplete</em> rather than quietly reporting a smaller number as fact.</p>
+  </div>
+
+</div>
+</body>
+</html>
