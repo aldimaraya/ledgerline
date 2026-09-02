@@ -34,8 +34,37 @@ published image.
      - /mnt/tank/apps/ledgerline/backups:/backups
    ```
 
-3. **Set the environment variables** — the compose file reads `.env`, which the Apps UI
-   will not have. Enter them directly:
+   Create those directories **before** installing, and give them to uid 1000. The
+   container runs as the unprivileged `node` user, and a bind mount that Docker creates
+   for you is owned by root — the app starts and then dies opening the database:
+
+   ```bash
+   sudo mkdir -p /mnt/tank/apps/ledgerline/{data,backups}
+   sudo chown -R 1000:1000 /mnt/tank/apps/ledgerline
+   ```
+
+   The symptom, if you skip it, is `SQLITE_CANTOPEN` or `EACCES` on `/data/ledgerline.db`
+   in `docker logs`.
+
+3. **Set the environment variables.** The Install-via-YAML dialog has only a name and the
+   compose body — there is no separate environment field, and `env_file: .env` will not
+   work because there is no `.env` on that side. Delete the `env_file` line and inline
+   them instead, at the same indent as `volumes:`:
+
+   ```yaml
+       environment:
+         ENCRYPTION_KEY: <64 hex characters>
+         TZ: America/New_York
+   ```
+
+   Only `ENCRYPTION_KEY` is required today; the server refuses to start without it rather
+   than running unable to decrypt the access URL. `SESSION_SECRET` and `APP_PASSCODE` are
+   not read by anything until the passcode gate exists.
+
+   Note that inlining puts the key in the app's stored configuration in plain text. Do
+   not paste that YAML anywhere public.
+
+   The full set, for reference:
 
    | Variable | Value |
    | --- | --- |

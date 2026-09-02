@@ -7,11 +7,21 @@ services:
     container_name: ledgerline
     restart: unless-stopped
 
+    # Locally, variables come from .env. TrueNAS's "Install via YAML" dialog has no .env
+    # to read and no separate environment field, so there they have to be inlined --
+    # uncomment the block below and delete env_file.
     env_file: .env
+    # environment:
+    #   ENCRYPTION_KEY: <openssl rand -hex 32>   # required; unrecoverable if lost
+    #   TZ: UTC                                  # the 23:55 snapshot job uses this
 
     volumes:
       # The entire application state. On TrueNAS point the left side at a dataset,
       # e.g. /mnt/tank/apps/ledgerline/data:/data
+      #
+      # The container runs as uid 1000 (node), not root. A bind mount that Docker
+      # creates for you is owned by root, and the app will start and then die opening
+      # the database. Create the directories first and give them to 1000:1000.
       - ./data:/data
       - ./backups:/backups
 
