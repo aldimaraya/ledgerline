@@ -54,7 +54,7 @@ published image.
    ```yaml
        environment:
          ENCRYPTION_KEY: <64 hex characters>
-         TZ: America/New_York
+         TZ: <your timezone, e.g. UTC>
    ```
 
    Only `ENCRYPTION_KEY` is required today; the server refuses to start without it rather
