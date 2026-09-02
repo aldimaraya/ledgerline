@@ -264,3 +264,76 @@ export function requestsToday(db: Db): number {
     .get() as { n: number };
   return row.n;
 }
+
+// ----------------------------------------------------------------------- meta
+
+export function setMeta(db: Db, key: string, value: string): void {
+  db.prepare(
+    `INSERT INTO meta (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(key, value);
+}
+
+export function getMeta(db: Db, key: string): string | null {
+  const row = db.prepare(`SELECT value FROM meta WHERE key = ?`).get(key) as
+    | { value: string }
+    | undefined;
+  return row?.value ?? null;
+}
+
+/** Most recent successful sync across all connections, as an ISO-ish SQLite datetime. */
+export function lastSyncedAt(db: Db): string | null {
+  const row = db
+    .prepare(`SELECT MAX(last_synced_at) AS at FROM connections WHERE last_synced_at IS NOT NULL`)
+    .get() as { at: string | null };
+  return row.at;
+}
+
+/** Hours since the last successful sync. Null when there has never been one. */
+export function cacheAgeHours(db: Db, now = new Date()): number | null {
+  const at = lastSyncedAt(db);
+  if (!at) return null;
+  // SQLite's datetime() has no zone marker but is UTC. Say so explicitly, or a machine
+  // west of Greenwich reads every sync as hours in the future and never revalidates.
+  const then = new Date(at.replace(' ', 'T') + 'Z');
+  if (Number.isNaN(then.getTime())) return null;
+  return (now.getTime() - then.getTime()) / 3_600_000;
+}
+
+// ------------------------------------------------------------------ history
+
+export interface HistoryPoint {
+  takenOn: string;
+  netCents: number;
+  liquidCents: number;
+  retirementCents: number;
+}
+
+/**
+ * Daily series built from `snapshots`.
+ *
+ * Reads the classification and bucket frozen into each snapshot row rather than joining
+ * to `accounts`. Reclassifying an account today must not rewrite what the chart showed
+ * last year.
+ */
+export function historySeries(db: Db, sinceDate: string | null): HistoryPoint[] {
+  // Excluded accounts contribute nothing; liabilities always subtract.
+  const signed = `CASE
+      WHEN classification = 'excluded'  THEN 0
+      WHEN classification = 'liability' THEN -ABS(balance_cents)
+      ELSE balance_cents
+    END`;
+
+  return db
+    .prepare(
+      `SELECT taken_on AS takenOn,
+              SUM(${signed}) AS netCents,
+              SUM(CASE WHEN bucket = 'liquid'     THEN ${signed} ELSE 0 END) AS liquidCents,
+              SUM(CASE WHEN bucket = 'retirement' THEN ${signed} ELSE 0 END) AS retirementCents
+       FROM snapshots
+       WHERE (? IS NULL OR taken_on >= ?)
+       GROUP BY taken_on
+       ORDER BY taken_on`
+    )
+    .all(sinceDate, sinceDate) as unknown as HistoryPoint[];
+}

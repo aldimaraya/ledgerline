@@ -9,6 +9,7 @@ import { withTransaction, type Db } from '../db/index.ts';
 import {
   missingOrgs,
   rememberOrg,
+  setMeta,
   upsertAccount,
   upsertHolding,
   writeSnapshots,
@@ -88,10 +89,18 @@ export function ingest(db: Db, set: SimpleFinAccountSet, connectionId: number | 
     }
   });
 
+  const missing = missingOrgs(db, seenOrgs);
+
+  // Persisted so /api/networth can report an incomplete total without syncing. A cached
+  // number served without its "this is missing an institution" flag is exactly the
+  // confidently-wrong answer this app exists to avoid.
+  setMeta(db, 'last_missing_orgs', JSON.stringify(missing));
+  setMeta(db, 'last_errors', JSON.stringify(set.errors));
+
   return {
     accountsSeen: set.accounts.length,
     holdingsSeen,
-    missing: missingOrgs(db, seenOrgs),
+    missing,
     errors: set.errors,
     snapshotsWritten: writeSnapshots(db, new Date().toISOString().slice(0, 10)),
   };
