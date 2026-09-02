@@ -19,7 +19,8 @@ import { registerApi } from './routes/api.ts';
 import { config } from './lib/env.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const WEB_DIST = resolve(here, '../../web/dist');
+// Overridable so the container layout is not pinned to the repository's shape.
+const WEB_DIST = process.env.WEB_DIST ?? resolve(here, '../../web/dist');
 
 const app = Fastify({
   logger: {

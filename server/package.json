@@ -8,7 +8,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node src/index.ts",
     "sync": "node src/cli/sync.ts",
-    "test": "node --test src/**/*.test.ts"
+    "test": "node --test src/**/*.test.ts",
+    "backup": "node src/cli/backup.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

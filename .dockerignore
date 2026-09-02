@@ -1,0 +1,24 @@
+# Everything here would otherwise be copied into an image layer, where it stays
+# readable forever even if a later layer deletes it.
+
+# Live credentials and real balances.
+.env
+*.db
+*.db-wal
+*.db-shm
+data/
+docs/sample-response.json
+docs/*historic*.json
+docs/BASELINE.local.md
+
+# Rebuilt inside the image; copying host builds risks shipping a stale bundle or
+# a native module compiled for the wrong platform.
+**/node_modules
+**/dist
+
+.git
+.github
+.claude
+design
+docs
+*.md

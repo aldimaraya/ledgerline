@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install server
+        working-directory: server
+        run: npm ci
+
+      # The fixture is gitignored because it holds real balances, so the tests that read
+      # it skip here and the pure-logic ones still run. That is deliberate: CI proves the
+      # code is consistent, the local run proves it against real data.
+      - name: Test server
+        working-directory: server
+        run: npm test
+
+      - name: Typecheck server
+        working-directory: server
+        run: npm run typecheck
+
+      - name: Install web
+        working-directory: web
+        run: npm ci
+
+      - name: Build web
+        working-directory: web
+        run: npm run build
+
+  image:
+    # Only publish from main, and only once the tests have passed.
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # The NAS is arm64 on some models and amd64 on others; building both means the
+          # same tag works either way.
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ledgerline:latest
+            ghcr.io/${{ github.repository_owner }}/ledgerline:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

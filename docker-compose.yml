@@ -1,17 +1,45 @@
 services:
   ledgerline:
-    build: .
+    # TrueNAS's Apps UI installs from a registry rather than building, so an image
+    # reference is the portable form. Swap in `build: .` when iterating locally.
+    image: ghcr.io/aldimaraya/ledgerline:latest
+    # build: .
     container_name: ledgerline
     restart: unless-stopped
+
     env_file: .env
+
     volumes:
-      - ./data:/app/data
+      # The entire application state. On TrueNAS point the left side at a dataset,
+      # e.g. /mnt/tank/apps/ledgerline/data:/data
+      - ./data:/data
+      - ./backups:/backups
+
     ports:
-      # Localhost only. Tailscale Serve puts it on the tailnet with a valid cert;
-      # nothing here is reachable from the public internet.
+      # Host loopback only. Tailscale Serve runs on the host, connects to 127.0.0.1,
+      # and publishes to the tailnet with a real certificate — so nothing needs to be
+      # reachable from the LAN, let alone the internet.
+      #
+      # Changing this to "3000:3000" exposes your balances to every device on the
+      # network. There is no login in front of it until Phase 4.
       - "127.0.0.1:3000:3000"
+
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
       interval: 60s
       timeout: 5s
       retries: 3
+      start_period: 10s
+
+    # Nothing in this app needs to write outside the volume or gain privileges.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
