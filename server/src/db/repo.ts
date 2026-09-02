@@ -41,11 +41,41 @@ export function getAccessUrl(db: Db, connectionId: number): string | null {
   );
 }
 
-export function firstConnectionId(db: Db): number | null {
-  const row = db.prepare(`SELECT id FROM connections ORDER BY id LIMIT 1`).get() as
+/**
+ * The connection to sync with: the most recently stored one.
+ *
+ * Newest rather than oldest, deliberately. Re-running onboarding is what you do when a
+ * connection has broken, so the new row is the fix — picking the oldest would keep
+ * using the credential you just replaced and fail identically forever.
+ */
+export function latestConnectionId(db: Db): number | null {
+  const row = db.prepare(`SELECT id FROM connections ORDER BY id DESC LIMIT 1`).get() as
     | { id: number }
     | undefined;
   return row?.id ?? null;
+}
+
+export interface ConnectionStatus {
+  id: number;
+  label: string;
+  created_at: string;
+  last_synced_at: string | null;
+  last_sync_error: string | null;
+  consecutive_errors: number;
+}
+
+/** Never includes the access URL. */
+export function listConnections(db: Db): ConnectionStatus[] {
+  return db
+    .prepare(
+      `SELECT id, label, created_at, last_synced_at, last_sync_error, consecutive_errors
+       FROM connections ORDER BY id`
+    )
+    .all() as unknown as ConnectionStatus[];
+}
+
+export function deleteConnection(db: Db, id: number): boolean {
+  return Number(db.prepare(`DELETE FROM connections WHERE id = ?`).run(id).changes) > 0;
 }
 
 export function recordSyncSuccess(db: Db, connectionId: number): void {

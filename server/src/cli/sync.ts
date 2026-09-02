@@ -7,6 +7,8 @@
  *   --fixture [path]  read docs/sample-response.json instead of calling SimpleFIN.
  *                     Costs nothing against the daily quota. Use it for everything
  *                     except confirming that live fetching still works.
+ *   --status          show stored connections and quota use, without calling SimpleFIN.
+ *   --forget <id>     delete a stored connection.
  *   --setup-token     claim a one-time setup token and store the access URL, then sync.
  *   --db <path>       override DATABASE_PATH.
  */
@@ -18,8 +20,10 @@ import { createInterface } from 'node:readline/promises';
 import { openDb } from '../db/index.ts';
 import {
   activeAccounts,
-  firstConnectionId,
+  deleteConnection,
   getAccessUrl,
+  latestConnectionId,
+  listConnections,
   logRequest,
   recordSyncFailure,
   recordSyncSuccess,
@@ -68,6 +72,36 @@ async function main(): Promise<number> {
   const db = openDb(valueOf('--db') ?? config.databasePath);
   const useFixture = has('--fixture');
 
+  // Show what is stored without touching SimpleFIN. Never prints the access URL.
+  if (has('--status')) {
+    const connections = listConnections(db);
+    if (connections.length === 0) {
+      console.log('No connections stored. Run `npm run sync -- --setup-token`.');
+      return 0;
+    }
+    const active = latestConnectionId(db);
+    for (const c of connections) {
+      console.log(`  [${c.id}]${c.id === active ? ' (in use)' : ''} created ${c.created_at}`);
+      console.log(`       last sync: ${c.last_synced_at ?? 'never'}`);
+      if (c.last_sync_error) {
+        console.log(`       last error: ${c.last_sync_error} (x${c.consecutive_errors})`);
+      }
+    }
+    console.log(`\n  ${requestsToday(db)}/${config.maxDailyRequests} requests used today.`);
+    if (connections.length > 1) {
+      console.log('  Remove a stale one with: npm run sync -- --forget <id>');
+    }
+    return 0;
+  }
+
+  const forget = valueOf('--forget');
+  if (forget !== undefined) {
+    const id = Number.parseInt(forget, 10);
+    if (!Number.isInteger(id)) throw new Error(`--forget needs a connection id, got: ${forget}`);
+    console.log(deleteConnection(db, id) ? `Removed connection ${id}.` : `No connection ${id}.`);
+    return 0;
+  }
+
   // Onboarding: claim a token once and store the access URL encrypted.
   if (has('--setup-token')) {
     const rl = createInterface({ input: process.stdin, output: process.stderr });
@@ -87,7 +121,7 @@ async function main(): Promise<number> {
     set = await loadFixture(path);
     console.error(`Reading ${path} — no request made to SimpleFIN.\n`);
   } else {
-    connectionId = firstConnectionId(db);
+    connectionId = latestConnectionId(db);
     if (connectionId === null) {
       console.error(
         'No connection stored. Run `npm run sync -- --setup-token` first, or\n' +

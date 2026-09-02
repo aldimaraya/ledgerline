@@ -68,7 +68,19 @@ export async function claimSetupToken(setupToken: string): Promise<string> {
     );
   }
 
-  return (await res.text()).trim();
+  const body = (await res.text()).trim();
+
+  // A spent or invalid token can answer 200 with an error message in the body. Storing
+  // that as if it were an access URL produces a 403 on every later sync, which reads as
+  // a revoked connection and sends you looking in entirely the wrong place.
+  if (!body.startsWith('https://')) {
+    throw new Error(
+      `The Bridge did not return an access URL. It replied: ${body.slice(0, 200)}\n` +
+        `Setup tokens are single-use — generate a fresh one at the SimpleFIN Bridge.`
+    );
+  }
+
+  return body;
 }
 
 export interface FetchOptions {
@@ -129,11 +141,17 @@ export async function fetchAccounts(
 
   const res = await fetch(url, { headers });
 
-  if (res.status === 403) {
-    throw new Error('SimpleFIN rejected the access URL. The connection may have been revoked.');
-  }
   if (!res.ok) {
-    throw new Error(`SimpleFIN returned HTTP ${res.status}.`);
+    // The body usually says which of these it is, and guessing wastes a request against
+    // a quota that disables the token when exceeded.
+    const detail = (await res.text().catch(() => '')).trim().slice(0, 200);
+    const hint =
+      res.status === 403
+        ? '\nThis is either a revoked connection, a stored value that is not a real access ' +
+          'URL, or the daily request limit having disabled the token. ' +
+          'Run `npm run sync -- --status` to see what is stored.'
+        : '';
+    throw new Error(`SimpleFIN returned HTTP ${res.status}${detail ? `: ${detail}` : '.'}${hint}`);
   }
 
   const body = (await res.json()) as SimpleFinAccountSet;
