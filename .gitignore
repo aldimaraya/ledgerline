@@ -23,3 +23,6 @@ docs/import-map.local.json
 
 # local backups of the live database
 server/backups/
+
+# staging area for moving the live database — real balances
+transfer/
