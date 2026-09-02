@@ -97,6 +97,23 @@ CREATE TABLE IF NOT EXISTS request_log (
 
 CREATE INDEX IF NOT EXISTS idx_request_log_time ON request_log(requested_at);
 
+-- Institutions we expect to hear from on every sync.
+--
+-- This exists because absence is silent: when an institution returns nothing, the
+-- response omits its accounts and leaves `errors` empty. Nothing in the payload says
+-- anything is wrong, and the total simply shrinks. Diffing what arrived against this
+-- table is the only way to notice.
+CREATE TABLE IF NOT EXISTS expected_orgs (
+  id            INTEGER PRIMARY KEY,
+  org_name      TEXT    NOT NULL UNIQUE,
+  org_domain    TEXT,
+  first_seen_at TEXT    NOT NULL DEFAULT (datetime('now')),
+  last_seen_at  TEXT,
+  -- Set when the user has deliberately disconnected an institution, so a legitimate
+  -- removal doesn't raise an alarm forever.
+  retired       INTEGER NOT NULL DEFAULT 0
+);
+
 -- Small key/value bag for settings and cache metadata.
 CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,

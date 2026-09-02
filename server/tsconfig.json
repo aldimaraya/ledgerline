@@ -1,14 +1,22 @@
 {
   "compilerOptions": {
     "target": "ES2023",
+    "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "outDir": "dist",
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["node"],
+
+    // Node strips types at runtime, so there is no build step and no emit. tsc is the
+    // type checker only. That is why imports carry explicit .ts extensions: Node
+    // resolves the real file rather than a compiled one that never exists.
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true
   },
   "include": ["src/**/*"]
 }
