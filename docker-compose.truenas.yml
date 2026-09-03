@@ -1,0 +1,79 @@
+# TrueNAS SCALE deployment, for Apps -> Custom App -> Install via YAML.
+#
+# This differs from docker-compose.yml in ways that are forced by how TrueNAS
+# deploys compose, not by preference. See docs/DEPLOY.md for the reasoning.
+#
+# Replace every <angle-bracket> value. Substitute your own pool name for `tank`.
+#
+# The Install-via-YAML dialog stores this body, including the secrets inlined
+# below, as plain text in the app's configuration. Do not paste it anywhere
+# public.
+
+services:
+  ledgerline:
+    image: ghcr.io/aldimaraya/ledgerline:latest
+    container_name: ledgerline
+    restart: unless-stopped
+
+    # env_file does not work here -- there is no .env on the NAS side.
+    environment:
+      # Must be the SAME key that encrypted the access URL in the database you
+      # are deploying against. A different key leaves the app running but unable
+      # to decrypt, and onboarding has to be redone with a fresh setup token.
+      ENCRYPTION_KEY: <64 hex characters>
+      # The 23:55 snapshot job uses this, so a wrong zone files snapshots on the
+      # wrong day.
+      TZ: <your timezone>
+
+    volumes:
+      - /mnt/tank/apps/ledgerline/data:/data
+      - /mnt/tank/apps/ledgerline/backups:/backups
+
+    # Deliberately no `ports:`. The tailscale sidecar reaches this container by
+    # service name over the app's bridge network, so nothing needs to be
+    # published. Adding a host port here would expose balances to the LAN for no
+    # benefit -- there is no login in front of the app until Phase 4.
+
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: ledgerline-ts
+    restart: unless-stopped
+
+    # NOTE: no `hostname:` here. Setting it to `ledgerline` makes that name
+    # resolve to this container inside its own namespace, so the serve proxy
+    # dials itself and every request returns 502. TS_HOSTNAME sets the tailnet
+    # name without touching Docker's DNS.
+    environment:
+      TS_AUTHKEY: <reusable, non-ephemeral auth key>
+      TS_HOSTNAME: ledgerline
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+
+    volumes:
+      # Mount the config *directory*, never serve.json itself. A single-file
+      # bind mount whose source does not exist yet is created by Docker as a
+      # directory, and tailscaled then fails with "is a directory".
+      - /mnt/tank/apps/ledgerline/ts-state:/var/lib/tailscale
+      - /mnt/tank/apps/ledgerline/config:/config:ro
+
+    cap_add:
+      - net_admin

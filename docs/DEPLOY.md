@@ -82,20 +82,87 @@ published image.
 
 ## Reaching it from a phone
 
-Tailscale runs on the NAS host, connects to `127.0.0.1:3000`, and publishes to the
-tailnet with a real certificate:
+TrueNAS SCALE has no `tailscale` binary in the host shell, so the documented
+`tailscale serve --bg 3000` is not available there. Run Tailscale as a sidecar
+container alongside the app instead — `docker-compose.truenas.yml` and
+`deploy/serve.json` are that configuration.
 
-```bash
-tailscale serve --bg 3000
-tailscale serve status
-```
+The sidecar joins the tailnet as its own machine, gets a real certificate, and
+reverse-proxies to the app. The app publishes no host port at all, so the sidecar
+is the only thing that can reach it.
 
-That prints `https://<machine>.<tailnet>.ts.net`. Open it in Safari, then Share →
-**Add to Home Screen**.
+1. **Create the config and state directories** (as datasets or plain directories):
+
+   ```bash
+   sudo mkdir -p /mnt/tank/apps/ledgerline/{config,ts-state}
+   ```
+
+   Ownership differs per directory and matters. The app runs as uid 1000; the
+   Tailscale image runs as **root**:
+
+   ```bash
+   sudo chown -R 1000:1000 /mnt/tank/apps/ledgerline/data /mnt/tank/apps/ledgerline/backups
+   ```
+
+   Leave `config` and `ts-state` root-owned. A recursive `chown 1000` over the whole
+   parent breaks tailscaled's ability to persist its node key.
+
+2. **Copy `deploy/serve.json` into the config directory** *before* first start:
+
+   ```bash
+   sudo cp deploy/serve.json /mnt/tank/apps/ledgerline/config/serve.json
+   ```
+
+3. **Generate an auth key** at Settings → Keys in the Tailscale admin console.
+   **Ephemeral must be off** — an ephemeral node is deleted when it goes offline,
+   taking its hostname and certificate with it. Reusable is convenient if you ever
+   recreate the state directory. Tag the node (e.g. `tag:server`, declared under
+   `tagOwners` in the policy file) so its key does not expire; an untagged node
+   silently drops off the tailnet after the expiry period.
+
+4. **Enable MagicDNS and HTTPS Certificates** under DNS in the admin console.
+   Without both, `${TS_CERT_DOMAIN}` resolves to nothing and the serve config fails
+   at startup.
+
+5. **Install `docker-compose.truenas.yml`** via Apps → Custom App → Install via YAML.
+
+Then `tailscale status` shows the machine, and `https://<TS_HOSTNAME>.<tailnet>.ts.net`
+serves the app. Open it in Safari, then Share → **Add to Home Screen**.
 
 Use the HTTPS name rather than the tailnet IP. Service workers and installable PWAs
 require a secure context, so over plain `http://100.x.y.z:3000` the app renders but does
 not install and does not cache offline.
+
+### What TrueNAS does to your compose file
+
+Install-via-YAML does not deploy compose verbatim, and its edits are silent. Verify
+with `docker inspect` after every deploy rather than trusting the YAML was applied.
+
+- **`network_mode: service:<name>` is discarded.** Containers land on a generated
+  bridge named `ix-<app>_default`. A sidecar pattern that assumes a shared network
+  namespace will not work; the sidecar must reach the app by **service name**
+  (`http://ledgerline:3000`), not `127.0.0.1`.
+- **Volume lines can silently fail to apply.** The container starts and looks
+  healthy while writing to its own ephemeral filesystem. Confirm with
+  `docker inspect <c> --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}'`.
+- **`env_file` does not work.** There is no `.env` on the NAS side; inline the
+  variables.
+
+### Failure modes worth recognising
+
+Each of these produces a healthy-looking container and no useful error in the app's
+own logs.
+
+| Symptom | Cause |
+| --- | --- |
+| `serve proxy: failed to read serve config: ... is a directory` | `serve.json` bind-mounted as a single file that did not exist; Docker created the source as a directory. Mount the containing directory instead. |
+| Fast `502` from the tailnet URL | The serve proxy reached nothing. Either the app is on a different network namespace, or the proxy target name resolves to the sidecar itself. |
+| Proxy target resolves to the sidecar | `hostname: ledgerline` was set on the sidecar, shadowing the app's service name in Docker DNS. Use `TS_HOSTNAME` instead — it sets the tailnet name without touching DNS. |
+| Node reappears as `<name>-1`, `-2` after restarts | `TS_STATE_DIR` is unset or its volume did not apply, so tailscaled re-registers from the auth key each boot. `tailscaled.state` must appear on the **host** directory. |
+| `SQLITE_CANTOPEN` / `EACCES` on `/data/ledgerline.db` | Bind-mount source is root-owned. The app runs as uid 1000. |
+
+A useful triage order: `curl` the tailnet URL and read the status code. A fast 502
+means Tailscale is fine and the app is unreachable; a hang means DNS or certificates.
 
 ## Moving an existing database
 
