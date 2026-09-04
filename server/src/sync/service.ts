@@ -35,6 +35,18 @@ export type SyncOutcome =
  * Everyone waiting joins the request that is already running.
  */
 let inFlight: Promise<SyncOutcome> | null = null;
+let inFlightSince = 0;
+
+/**
+ * Slack allowed on top of the upstream deadline before a stuck sync is abandoned.
+ *
+ * Deduplication is only ever a saving, so it must never be load-bearing. Held
+ * unconditionally it turns one wedged request into a permanently unsyncable app:
+ * `revalidateInBackground` skips while `isSyncing()` is true, and every later `syncNow`
+ * attaches to the same promise that is never going to settle. With the client's own
+ * timeout in place this ceiling should never be reached.
+ */
+const IN_FLIGHT_SLACK_MS = 15_000;
 
 async function performSync(db: Db): Promise<SyncOutcome> {
   const connectionId = latestConnectionId(db);
@@ -49,7 +61,10 @@ async function performSync(db: Db): Promise<SyncOutcome> {
   if (!accessUrl) return { status: 'failed', message: 'Stored connection has no access URL.' };
 
   try {
-    const set = await fetchAccounts(accessUrl, { includeHoldings: true });
+    const set = await fetchAccounts(accessUrl, {
+      includeHoldings: true,
+      timeoutMs: config.simplefinTimeoutMs,
+    });
     logRequest(db, '/accounts', 200);
     recordSyncSuccess(db, connectionId);
     return { status: 'ok', result: ingest(db, set, connectionId) };
@@ -62,11 +77,17 @@ async function performSync(db: Db): Promise<SyncOutcome> {
 }
 
 export function syncNow(db: Db): Promise<SyncOutcome> {
-  if (inFlight) return inFlight;
-  inFlight = performSync(db).finally(() => {
-    inFlight = null;
+  const ceiling = config.simplefinTimeoutMs + IN_FLIGHT_SLACK_MS;
+  if (inFlight && Date.now() - inFlightSince < ceiling) return inFlight;
+
+  inFlightSince = Date.now();
+  const run: Promise<SyncOutcome> = performSync(db).finally(() => {
+    // Only release the slot if this is still the current attempt. An abandoned sync
+    // settling late must not clear a newer one that has taken its place.
+    if (inFlight === run) inFlight = null;
   });
-  return inFlight;
+  inFlight = run;
+  return run;
 }
 
 export function isSyncing(): boolean {

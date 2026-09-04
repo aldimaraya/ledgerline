@@ -80,9 +80,20 @@ export type SyncResult =
  */
 export async function requestSync(): Promise<SyncResult> {
   try {
-    const res = await fetch('/api/sync', { method: 'POST' });
+    // A backstop above the server's own upstream deadline, so the button always resolves
+    // even if the server itself stops answering mid-request. Without it the spinner is
+    // the only thing the user ever sees.
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      signal: AbortSignal.timeout(75_000),
+    });
     return (await res.json()) as SyncResult;
-  } catch {
-    return { ok: false, reason: 'failed', message: 'Could not reach the server.' };
+  } catch (err) {
+    const timedOut = err instanceof Error && err.name === 'TimeoutError';
+    return {
+      ok: false,
+      reason: 'failed',
+      message: timedOut ? 'The server stopped responding.' : 'Could not reach the server.',
+    };
   }
 }

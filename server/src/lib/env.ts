@@ -36,6 +36,8 @@ export const config = {
   cacheTtlHours: int('CACHE_TTL_HOURS', 12),
   /** Self-imposed ceiling. SimpleFIN's hard limit is 24 and exceeding it disables the token. */
   maxDailyRequests: int('MAX_DAILY_REQUESTS', 20),
+  /** Deadline for one upstream request. See DEFAULT_TIMEOUT_MS in the SimpleFIN client. */
+  simplefinTimeoutMs: int('SIMPLEFIN_TIMEOUT_MS', 45_000),
   port: int('PORT', 3000),
   get encryptionKey(): string {
     return required('ENCRYPTION_KEY');

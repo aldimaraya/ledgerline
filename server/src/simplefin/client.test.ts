@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { splitCredentials, toCents } from './client.ts';
+import { fetchAccounts, splitCredentials, toCents } from './client.ts';
 
 describe('splitCredentials', () => {
   // fetch() throws "Request cannot be constructed from a URL that includes credentials"
@@ -47,5 +47,43 @@ describe('toCents', () => {
 
   test('throws on something unparseable rather than returning NaN', () => {
     assert.throws(() => toCents('not a number'));
+  });
+});
+
+describe('fetchAccounts', () => {
+  // The failure this guards against is not a slow sync, it is a sync that never ends:
+  // POST /api/sync holds the connection open, the button spins forever, and the
+  // in-flight guard blocks every later attempt until the process restarts.
+  test('gives up on a request the Bridge never answers', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
+      })) as typeof fetch;
+
+    try {
+      await assert.rejects(
+        fetchAccounts('https://user:pass@example.com/simplefin', { timeoutMs: 20 }),
+        /did not respond within/
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  test('passes an abort signal on every request', async () => {
+    const realFetch = globalThis.fetch;
+    let sawSignal = false;
+    globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) => {
+      sawSignal = init?.signal instanceof AbortSignal;
+      return Promise.resolve(new Response('{"accounts":[],"errors":[]}', { status: 200 }));
+    }) as typeof fetch;
+
+    try {
+      await fetchAccounts('https://user:pass@example.com/simplefin');
+      assert.ok(sawSignal, 'a request without a deadline can hang the whole app');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });

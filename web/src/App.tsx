@@ -59,21 +59,26 @@ export default function App() {
     if (busy) return;
     setBusy(true);
     setNotice(null);
-    const result = await requestSync();
+    try {
+      const result = await requestSync();
 
-    if (result.ok) {
-      await load();
-      const h = await fetchHistory(range).catch(() => null);
-      if (h) setHistory(h);
-    } else if (result.reason === 'rate-limited') {
-      // Not an error: the cap exists so the upstream token is never disabled.
-      setNotice(`Refresh limit reached (${result.used}/${result.cap} today). Try later.`);
-    } else if (result.reason === 'no-connection') {
-      setNotice('No connection set up yet.');
-    } else {
-      setNotice(result.message ?? 'Sync failed.');
+      if (result.ok) {
+        await load();
+        const h = await fetchHistory(range).catch(() => null);
+        if (h) setHistory(h);
+      } else if (result.reason === 'rate-limited') {
+        // Not an error: the cap exists so the upstream token is never disabled.
+        setNotice(`Refresh limit reached (${result.used}/${result.cap} today). Try later.`);
+      } else if (result.reason === 'no-connection') {
+        setNotice('No connection set up yet.');
+      } else {
+        setNotice(result.message ?? 'Sync failed.');
+      }
+    } finally {
+      // Never leave the button stuck on "syncing…". Anything that escapes above is a bug,
+      // but the recovery for it should not be a page reload.
+      setBusy(false);
     }
-    setBusy(false);
   }, [busy, load, range]);
 
   const { ref, pull, armed } = usePullToRefresh(sync);

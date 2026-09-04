@@ -83,12 +83,25 @@ export async function claimSetupToken(setupToken: string): Promise<string> {
   return body;
 }
 
+/**
+ * Hard ceiling on a single upstream request.
+ *
+ * Node's `fetch` has no usable default here. Undici applies separate connect, headers
+ * and body timeouts, and a response that trickles bytes keeps resetting the body one, so
+ * a request can stay open indefinitely. That reaches the user as a sync button that
+ * spins forever and, worse, as an in-flight sync that never settles and blocks every
+ * later one.
+ */
+export const DEFAULT_TIMEOUT_MS = 45_000;
+
 export interface FetchOptions {
   /** Omit both dates to fetch balances only — cheaper and all net worth needs. */
   startDate?: Date;
   endDate?: Date;
   /** Ask for investment positions. Brokerages populate these; banks do not. */
   includeHoldings?: boolean;
+  /** Overall deadline for the request. Defaults to `DEFAULT_TIMEOUT_MS`. */
+  timeoutMs?: number;
 }
 
 /**
@@ -139,7 +152,23 @@ export async function fetchAccounts(
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (authorization) headers.Authorization = authorization;
 
-  const res = await fetch(url, { headers });
+  // One signal covers connect, headers and body as a single budget, which is the only
+  // way to guarantee this promise settles.
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      throw new Error(
+        `SimpleFIN did not respond within ${Math.round(timeoutMs / 1000)}s. ` +
+          `The attempt still counts against the daily cap, because the Bridge may have ` +
+          `served it and only the response was lost.`
+      );
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     // The body usually says which of these it is, and guessing wastes a request against
