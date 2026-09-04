@@ -14,8 +14,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getDb, closeDb } from './db/index.ts';
-import { writeSnapshots } from './db/repo.ts';
 import { registerApi } from './routes/api.ts';
+import { runDaily } from './sync/daily.ts';
 import { config } from './lib/env.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -62,21 +62,37 @@ if (existsSync(WEB_DIST)) {
 }
 
 /**
- * Daily snapshot at 23:55 local time.
+ * The nightly job, at 23:45 local time: sync, then snapshot.
  *
- * Writes whatever the cache already holds rather than forcing a fetch: the point is to
- * record the day's closing position, and a bank that has not reported since morning will
- * not report differently at 23:55. It just spends a request.
+ * It fetches rather than recording whatever happens to be cached. The original design
+ * did the latter, on the reasoning that a bank which has not reported since morning will
+ * not report differently at 23:55 — true, but it quietly assumed someone had opened the
+ * app that morning to trigger a refresh. Nobody had to, and on the days nobody did the
+ * job recorded week-old balances as that day's close.
+ *
+ * One request a night against a cap of 20, so the budget is not the constraint here.
  */
-const snapshotJob = cron.schedule(
-  '55 23 * * *',
+const nightlyJob = cron.schedule(
+  '45 23 * * *',
   () => {
-    try {
-      const written = writeSnapshots(db, new Date().toISOString().slice(0, 10));
-      app.log.info({ written }, 'daily snapshot written');
-    } catch (err) {
-      app.log.error({ err }, 'daily snapshot failed');
-    }
+    void runDaily(db).then(
+      ({ sync, snapshot }) => {
+        if (sync.status !== 'ok') {
+          app.log.warn({ sync }, 'nightly sync did not succeed');
+        }
+        if (snapshot.status === 'skipped') {
+          // Loud, because the visible symptom is a gap in the chart and the cause is
+          // several hours upstream of it.
+          app.log.warn(
+            { takenOn: snapshot.takenOn, ageHours: snapshot.ageHours },
+            'snapshot skipped: cache too old to record as a closing position'
+          );
+        } else {
+          app.log.info({ takenOn: snapshot.takenOn, rows: snapshot.rows }, 'daily snapshot written');
+        }
+      },
+      (err: unknown) => app.log.error({ err }, 'nightly job failed')
+    );
   },
   { timezone: process.env.TZ ?? 'UTC' }
 );
@@ -92,7 +108,7 @@ try {
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
-    snapshotJob.stop();
+    nightlyJob.stop();
     void app.close().then(() => {
       closeDb();
       process.exit(0);

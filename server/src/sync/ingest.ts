@@ -16,6 +16,7 @@ import {
 } from '../db/repo.ts';
 import { toCents, type SimpleFinAccount, type SimpleFinAccountSet } from '../simplefin/client.ts';
 import { guessBucket, guessClassification, normalizeBalance } from '../lib/networth.ts';
+import { localDate } from '../lib/range.ts';
 
 export interface IngestResult {
   accountsSeen: number;
@@ -102,6 +103,6 @@ export function ingest(db: Db, set: SimpleFinAccountSet, connectionId: number | 
     holdingsSeen,
     missing,
     errors: set.errors,
-    snapshotsWritten: writeSnapshots(db, new Date().toISOString().slice(0, 10)),
+    snapshotsWritten: writeSnapshots(db, localDate()),
   };
 }

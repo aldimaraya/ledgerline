@@ -38,6 +38,12 @@ export const config = {
   maxDailyRequests: int('MAX_DAILY_REQUESTS', 20),
   /** Deadline for one upstream request. See DEFAULT_TIMEOUT_MS in the SimpleFIN client. */
   simplefinTimeoutMs: int('SIMPLEFIN_TIMEOUT_MS', 45_000),
+  /**
+   * How old the cache may be and still be worth recording as a day's closing position.
+   * Past this the nightly job leaves a gap instead, because an invented data point is
+   * worse than a missing one.
+   */
+  snapshotMaxAgeHours: int('SNAPSHOT_MAX_AGE_HOURS', 24),
   port: int('PORT', 3000),
   get encryptionKey(): string {
     return required('ENCRYPTION_KEY');

@@ -10,6 +10,20 @@ export function isRange(v: string): v is Range {
 }
 
 /**
+ * Today as YYYY-MM-DD in the process timezone.
+ *
+ * `toISOString().slice(0, 10)` is the obvious spelling and it is wrong here. Snapshots
+ * are keyed on a local calendar date, and the nightly job runs a few minutes before
+ * midnight — west of Greenwich that is already tomorrow in UTC, so the day's closing
+ * position gets filed under the wrong date and then overwritten by the next morning's
+ * first sync. Node reads TZ, which the container sets.
+ */
+export function localDate(now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
  * The earliest date a range includes, as YYYY-MM-DD, or null for "all".
  *
  * Snapshots are stored as local calendar dates, so this works in calendar months rather
@@ -28,5 +42,5 @@ export function sinceDate(range: Range, now = new Date()): string | null {
     // rather than throwing. Off-by-a-day at a month boundary is invisible on a chart.
     d.setMonth(d.getMonth() - months);
   }
-  return d.toISOString().slice(0, 10);
+  return localDate(d);
 }
